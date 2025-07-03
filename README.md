@@ -38,3 +38,15 @@ Game Summary
 5. Voting Phase: UI lists names → vote with imposter/civilian guesses
 6. Scoring: Firebase checks guesses vs real roles → scores everyone
 7. Winners Announced: Top 5 revealed for prizes
+
+# 🗂️ Game Management Phases 
+
+| Phase        | Category              | Responsibility    | Description                                                                 |
+|--------------|-----------------------|-------------------|-----------------------------------------------------------------------------|
+| 🎯 Phase 0   | **Game Setup**        | Host / Admin      | Set up QR code, Firebase project, and deploy app via Netlify                |
+| ✅ Phase 1   | **Player Entry**      | Player            | Players scan QR code → enter name → added to Firestore → wait screen       |
+| ▶️ Phase 2   | **Role Assignment**   | Host or Backend   | On host trigger: assign 1/3 of players as **Imposters**, rest as Civilians |
+| ⏳ Phase 3   | **Game Phase (Chat + Voting)** | Player | Players move through small groups, sharing vacation stories (imposters lie, civilians tell the truth) while voting on others' roles using a live in-app panel. |      |
+| ✅ Phase 4   | **Voting Phase** | Player | Players have 30 seconds to vote via UI. Each player casts two votes per person: (1) role guess — “Imposter” or “Civilian” and (2) story quality — rated from 1 to 5 stars. Both happen on the same voting panel. |
+| 🧮 Phase 5   | **Scoring & Results** | Backend or Host   | Count correct guesses → score players → identify winners                    |
+| 🏁 Phase 6   | **Winners & Endgame** | Host              | Display top scorers and role reveal → announce prize winners                |
