@@ -2,18 +2,37 @@ import React, { useState } from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
+// ✅ Toggle this ON/OFF to control localStorage behavior
+const USE_LOCAL_STORAGE = false;   // <-- set to true for production
+
 export default function JoinForm({ onJoin }) {
   const [name, setName] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const doc = await addDoc(collection(db, "players"), {
-      name: name.trim(),
+
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    // Add new player to Firestore
+    const docRef = await addDoc(collection(db, "players"), {
+      name: trimmedName,
       role: null,
       hasVoted: false,
       score: 0,
     });
-    onJoin({ id: doc.id, name });
+
+    // ✅ Save to localStorage *only if enabled*
+    if (USE_LOCAL_STORAGE) {
+      localStorage.setItem("playerId", docRef.id);
+      localStorage.setItem("playerName", trimmedName);
+    }
+
+    // Notify parent component
+    onJoin({ id: docRef.id, name: trimmedName });
+
+    // Clear input field for next player on same device
+    setName("");
   };
 
   return (

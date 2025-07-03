@@ -7,7 +7,18 @@ import HostControls from "./components/HostControls";
 import StartChatButton from "./components/StartChatButton";
 
 function App() {
-  const [player, setPlayer] = useState(null);
+  const USE_LOCAL_STORAGE = false;
+
+const [player, setPlayer] = useState(() => {
+  if (USE_LOCAL_STORAGE) {
+    const id = localStorage.getItem("playerId");
+    const name = localStorage.getItem("playerName");
+    return id && name ? { id, name } : null;
+  }
+  return null;
+});
+
+  
   const [role, setRole] = useState(null);
   const [phase, setPhase] = useState("waiting");
   const [rolesAssigned, setRolesAssigned] = useState(false);
