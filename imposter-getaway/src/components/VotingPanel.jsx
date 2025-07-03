@@ -7,6 +7,7 @@ export default function VotingPanel({ playerId }) {
   const [search, setSearch] = useState("");
   const [votes, setVotes] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(60);
 
   // Fetch all players except self
   useEffect(() => {
@@ -31,22 +32,93 @@ export default function VotingPanel({ playerId }) {
     checkIfSubmitted();
   }, [playerId]);
 
-  const handleVote = (targetId, roleGuess) => {
+  // Countdown timer
+  useEffect(() => {
+    if (submitted) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleAutoSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [submitted]);
+
+  // Handle role vote
+  const handleRoleVote = (targetId, roleGuess) => {
     if (submitted) return;
     setVotes(prev => ({
       ...prev,
-      [targetId]: roleGuess,
+      [targetId]: {
+        ...(prev[targetId] || {}),
+        roleGuess,
+      },
     }));
   };
 
+  // Handle rating vote
+  const handleRating = (targetId, rating) => {
+    if (submitted) return;
+    setVotes(prev => ({
+      ...prev,
+      [targetId]: {
+        ...(prev[targetId] || {}),
+        rating,
+      },
+    }));
+  };
+
+  // Manual submit
   const handleSubmitVotes = async () => {
-    const docRef = doc(db, "players", playerId);
-    await updateDoc(docRef, {
-      votes,
+    if (submitted) return;
+    const completedVotes = fillMissingVotes();
+    await updateDoc(doc(db, "players", playerId), {
+      votes: completedVotes,
       hasVoted: true,
     });
+    setVotes(completedVotes);
     setSubmitted(true);
     alert("✅ Your votes have been submitted!");
+  };
+
+  // Auto-submit on timer end
+  const handleAutoSubmit = async () => {
+    if (submitted) return;
+    const completedVotes = fillMissingVotes();
+    await updateDoc(doc(db, "players", playerId), {
+      votes: completedVotes,
+      hasVoted: true,
+    });
+    setVotes(completedVotes);
+    setSubmitted(true);
+    alert("⏰ Time is up! Your votes were auto-submitted.");
+  };
+
+  // Fill missing votes with defaults
+  const fillMissingVotes = () => {
+    const completed = { ...votes };
+    players.forEach(p => {
+      if (!completed[p.id]) {
+        completed[p.id] = {
+          roleGuess: "civilian",
+          rating: 3,
+        };
+      } else {
+        if (!completed[p.id].roleGuess) {
+          completed[p.id].roleGuess = "civilian";
+        }
+        if (!completed[p.id].rating) {
+          completed[p.id].rating = 3;
+        }
+      }
+    });
+    return completed;
   };
 
   const filtered = players.filter(p =>
@@ -56,6 +128,7 @@ export default function VotingPanel({ playerId }) {
   return (
     <div style={{ marginTop: 30 }}>
       <h3>🗳️ Vote While You Chat</h3>
+      <p>⏰ Time Left: {timeLeft}s</p>
 
       {!submitted && (
         <>
@@ -66,34 +139,50 @@ export default function VotingPanel({ playerId }) {
             onChange={e => setSearch(e.target.value)}
             style={{ padding: 8, width: "100%", marginBottom: 10 }}
           />
+
           <ul style={{ listStyle: "none", padding: 0 }}>
             {filtered.map(p => (
-              <li key={p.id} style={{ marginBottom: 10 }}>
+              <li key={p.id} style={{ marginBottom: 20, borderBottom: "1px solid #ddd", paddingBottom: 10 }}>
                 <strong>{p.name}</strong>
-                <div>
+                <div style={{ marginTop: 5 }}>
                   <button
-                    onClick={() => handleVote(p.id, "imposter")}
-                    disabled={votes[p.id] === "imposter"}
+                    onClick={() => handleRoleVote(p.id, "imposter")}
+                    disabled={votes[p.id]?.roleGuess === "imposter"}
                     style={{
                       marginRight: 5,
-                      backgroundColor: votes[p.id] === "imposter" ? "#f87171" : "#eee",
+                      backgroundColor: votes[p.id]?.roleGuess === "imposter" ? "#f87171" : "#eee",
                     }}
                   >
                     Imposter
                   </button>
                   <button
-                    onClick={() => handleVote(p.id, "civilian")}
-                    disabled={votes[p.id] === "civilian"}
+                    onClick={() => handleRoleVote(p.id, "civilian")}
+                    disabled={votes[p.id]?.roleGuess === "civilian"}
                     style={{
-                      backgroundColor: votes[p.id] === "civilian" ? "#60a5fa" : "#eee",
+                      backgroundColor: votes[p.id]?.roleGuess === "civilian" ? "#60a5fa" : "#eee",
                     }}
                   >
                     Civilian
                   </button>
                 </div>
+                <div style={{ marginTop: 8 }}>
+                  <label>⭐ Rate Story Quality:</label>
+                  <select
+                    value={votes[p.id]?.rating || ""}
+                    onChange={e => handleRating(p.id, parseInt(e.target.value))}
+                    disabled={submitted}
+                    style={{ marginLeft: 5 }}
+                  >
+                    <option value="">Select</option>
+                    {[1, 2, 3, 4, 5].map(star => (
+                      <option key={star} value={star}>{star} ⭐</option>
+                    ))}
+                  </select>
+                </div>
               </li>
             ))}
           </ul>
+
           <button
             onClick={handleSubmitVotes}
             style={{
@@ -116,11 +205,11 @@ export default function VotingPanel({ playerId }) {
           <strong>✅ Your votes have been submitted!</strong>
           <h4 style={{ marginTop: 10 }}>🧾 Your Votes:</h4>
           <ul>
-            {Object.entries(votes).map(([id, guess]) => {
+            {Object.entries(votes).map(([id, vote]) => {
               const name = players.find(p => p.id === id)?.name || "Unknown";
               return (
                 <li key={id}>
-                  {name} → {guess}
+                  {name} → {vote.roleGuess} (⭐ {vote.rating})
                 </li>
               );
             })}
