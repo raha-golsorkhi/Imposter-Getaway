@@ -1,4 +1,4 @@
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
 export default function StartChatButton() {
@@ -6,8 +6,10 @@ export default function StartChatButton() {
     await updateDoc(doc(db, "game", "settings"), {
       phase: "chatting",
       chatStarted: true,
+      votingStartTime: serverTimestamp(),
+      votingDuration: 10
     });
-    
+    alert("✅ Chatting phase started. Timer has begun for everyone!");
   };
 
   return (

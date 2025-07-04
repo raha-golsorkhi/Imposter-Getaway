@@ -10,31 +10,30 @@ import StartVotingButton from "./components/StartVotingButton";
 function App() {
   const USE_LOCAL_STORAGE = false;
 
-const [player, setPlayer] = useState(() => {
-  if (USE_LOCAL_STORAGE) {
-    const id = localStorage.getItem("playerId");
-    const name = localStorage.getItem("playerName");
-    return id && name ? { id, name } : null;
-  }
-  return null;
-});
+  const [player, setPlayer] = useState(() => {
+    if (USE_LOCAL_STORAGE) {
+      const id = localStorage.getItem("playerId");
+      const name = localStorage.getItem("playerName");
+      return id && name ? { id, name } : null;
+    }
+    return null;
+  });
 
-  
   const [role, setRole] = useState(null);
   const [phase, setPhase] = useState("waiting");
   const [rolesAssigned, setRolesAssigned] = useState(false);
-  
+  const [chatStarted, setChatStarted] = useState(false);
+
   const isHost = player?.name?.trim().toLowerCase() === "raha";
 
-  
-
-  // Listen to game settings for phase and rolesAssigned
+  // ✅ Listen to game settings
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "game", "settings"), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setPhase(data.phase || "waiting");
         setRolesAssigned(data.rolesAssigned || false);
+        setChatStarted(data.chatStarted || false);
       }
     });
     return unsub;
@@ -56,22 +55,30 @@ const [player, setPlayer] = useState(() => {
         <JoinForm onJoin={setPlayer} />
       ) : (
         <>
-          <WaitingRoom player={player} role={role} setRole={setRole} isHost={isHost} />
+          <WaitingRoom
+            player={player}
+            role={role}
+            setRole={setRole}
+            isHost={isHost}
+          />
 
-          {/* Host controls shown only when user is host AND game is in waiting phase */}
-          {isHost && phase === "waiting" && !rolesAssigned && (
+          {/* ✅ Host Controls: Assign Roles */}
+          {isHost && (phase === "waiting" || phase === "chatting") && (
             <HostControls />
           )}
-          {isHost && phase === "waiting" && rolesAssigned && (
-          <>
-            <div>Roles assigned. Please start the chat.</div>
-            <StartChatButton />
-          </>
-          )}
-          {isHost && phase === "chatting" && (
-            <StartVotingButton />
-            )}
 
+          {/* ✅ Host Start Chat button */}
+          {isHost && phase === "waiting" && rolesAssigned && (
+            <>
+              <div>Roles assigned. Please start the chat.</div>
+              <StartChatButton />
+            </>
+          )}
+
+          {/* ✅ Host Start Voting button */}
+          {isHost && phase === "chatting" && chatStarted && (
+            <StartVotingButton />
+          )}
         </>
       )}
     </div>

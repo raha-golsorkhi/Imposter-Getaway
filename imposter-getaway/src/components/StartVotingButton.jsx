@@ -5,8 +5,6 @@ export default function StartVotingButton() {
   const handleStartVoting = async () => {
     await updateDoc(doc(db, "game", "settings"), {
       phase: "voting",
-      votingStartTime: serverTimestamp(),
-      votingDuration: 60
     });
   };
 
