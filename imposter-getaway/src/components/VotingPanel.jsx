@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, updateDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
 export default function VotingPanel({ playerId }) {
@@ -8,23 +8,28 @@ export default function VotingPanel({ playerId }) {
   const [votes, setVotes] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(60);
+  const [votingStartTime, setVotingStartTime] = useState(null);
+  const [votingDuration, setVotingDuration] = useState(60);
 
-  // Fetch all players except self
+  // ✅ 1. Load all players except self
   useEffect(() => {
     const fetchPlayers = async () => {
       const snapshot = await getDocs(collection(db, "players"));
-      const all = snapshot.docs
+      const others = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(p => p.id !== playerId);
-      setPlayers(all);
+      setPlayers(others);
     };
 
     const checkIfSubmitted = async () => {
-      const docRef = doc(db, "players", playerId);
-      const playerDoc = await getDoc(docRef);
-      if (playerDoc.exists() && playerDoc.data().hasVoted) {
-        setSubmitted(true);
-        setVotes(playerDoc.data().votes || {});
+      const playerRef = doc(db, "players", playerId);
+      const playerSnap = await getDoc(playerRef);
+      if (playerSnap.exists()) {
+        const data = playerSnap.data();
+        if (data.hasVoted) {
+          setSubmitted(true);
+          setVotes(data.votes || {});
+        }
       }
     };
 
@@ -32,25 +37,38 @@ export default function VotingPanel({ playerId }) {
     checkIfSubmitted();
   }, [playerId]);
 
-  // Countdown timer
+  // ✅ 2. Listen for voting start time & duration from game settings
   useEffect(() => {
-    if (submitted) return;
+    const unsub = onSnapshot(doc(db, "game", "settings"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setVotingStartTime(data.votingStartTime);
+        setVotingDuration(data.votingDuration || 60);
+      }
+    });
+    return unsub;
+  }, []);
+
+  // ✅ 3. Countdown timer based on shared votingStartTime
+  useEffect(() => {
+    if (!votingStartTime || submitted) return;
 
     const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
+      const now = Date.now();
+      const end = votingStartTime.toDate().getTime() + votingDuration * 1000;
+      const diff = Math.max(0, Math.floor((end - now) / 1000));
+      setTimeLeft(diff);
+
+      if (diff <= 0) {
+        clearInterval(interval);
+        handleAutoSubmit();
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [submitted]);
+  }, [votingStartTime, votingDuration, submitted]);
 
-  // Handle role vote
+  // ✅ 4. Vote handlers
   const handleRoleVote = (targetId, roleGuess) => {
     if (submitted) return;
     setVotes(prev => ({
@@ -62,7 +80,6 @@ export default function VotingPanel({ playerId }) {
     }));
   };
 
-  // Handle rating vote
   const handleRating = (targetId, rating) => {
     if (submitted) return;
     setVotes(prev => ({
@@ -74,57 +91,34 @@ export default function VotingPanel({ playerId }) {
     }));
   };
 
-  // Manual submit
+  // ✅ 5. Manual submit
   const handleSubmitVotes = async () => {
     if (submitted) return;
-    const completedVotes = fillMissingVotes();
     await updateDoc(doc(db, "players", playerId), {
-      votes: completedVotes,
+      votes,
       hasVoted: true,
     });
-    setVotes(completedVotes);
     setSubmitted(true);
     alert("✅ Your votes have been submitted!");
   };
 
-  // Auto-submit on timer end
+  // ✅ 6. Auto-submit on timer end
   const handleAutoSubmit = async () => {
     if (submitted) return;
-    const completedVotes = fillMissingVotes();
     await updateDoc(doc(db, "players", playerId), {
-      votes: completedVotes,
+      votes,
       hasVoted: true,
     });
-    setVotes(completedVotes);
     setSubmitted(true);
     alert("⏰ Time is up! Your votes were auto-submitted.");
   };
 
-  // Fill missing votes with defaults
-  const fillMissingVotes = () => {
-    const completed = { ...votes };
-    players.forEach(p => {
-      if (!completed[p.id]) {
-        completed[p.id] = {
-          roleGuess: "civilian",
-          rating: 3,
-        };
-      } else {
-        if (!completed[p.id].roleGuess) {
-          completed[p.id].roleGuess = "civilian";
-        }
-        if (!completed[p.id].rating) {
-          completed[p.id].rating = 3;
-        }
-      }
-    });
-    return completed;
-  };
-
+  // ✅ 7. Filter for search bar
   const filtered = players.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // ✅ 8. Render
   return (
     <div style={{ marginTop: 30 }}>
       <h3>🗳️ Vote While You Chat</h3>

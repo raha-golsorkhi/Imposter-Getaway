@@ -5,6 +5,7 @@ import JoinForm from "./components/JoinForm";
 import WaitingRoom from "./components/WaitingRoom";
 import HostControls from "./components/HostControls";
 import StartChatButton from "./components/StartChatButton";
+import StartVotingButton from "./components/StartVotingButton";
 
 function App() {
   const USE_LOCAL_STORAGE = false;
@@ -61,13 +62,16 @@ const [player, setPlayer] = useState(() => {
           {isHost && phase === "waiting" && !rolesAssigned && (
             <HostControls />
           )}
-
           {isHost && phase === "waiting" && rolesAssigned && (
-            <>
-              <div>Roles assigned. Please start the chat.</div>
-              <StartChatButton />
-            </>
+          <>
+            <div>Roles assigned. Please start the chat.</div>
+            <StartChatButton />
+          </>
           )}
+          {isHost && phase === "chatting" && (
+            <StartVotingButton />
+            )}
+
         </>
       )}
     </div>
