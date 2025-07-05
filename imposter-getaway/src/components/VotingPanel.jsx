@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { collection, getDocs, updateDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
-export default function VotingPanel({ playerId }) {
+export default function VotingPanel({ playerId, isHost }) {
   const [players, setPlayers] = useState([]);
   const [search, setSearch] = useState("");
   const [votes, setVotes] = useState({});
@@ -11,7 +11,7 @@ export default function VotingPanel({ playerId }) {
   const [votingStartTime, setVotingStartTime] = useState(null);
   const [votingDuration, setVotingDuration] = useState(60);
 
-  // ✅ 1. Load all players except self
+  // ✅ Load players (exclude self)
   useEffect(() => {
     const fetchPlayers = async () => {
       const snapshot = await getDocs(collection(db, "players"));
@@ -37,7 +37,7 @@ export default function VotingPanel({ playerId }) {
     checkIfSubmitted();
   }, [playerId]);
 
-  // ✅ 2. Listen for voting start time & duration from game settings
+  // ✅ Listen to voting settings
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "game", "settings"), (docSnap) => {
       if (docSnap.exists()) {
@@ -49,7 +49,7 @@ export default function VotingPanel({ playerId }) {
     return unsub;
   }, []);
 
-  // ✅ 3. Countdown timer based on shared votingStartTime
+  // ✅ Shared countdown timer
   useEffect(() => {
     if (!votingStartTime || submitted) return;
 
@@ -68,7 +68,7 @@ export default function VotingPanel({ playerId }) {
     return () => clearInterval(interval);
   }, [votingStartTime, votingDuration, submitted]);
 
-  // ✅ 4. Vote handlers
+  // ✅ Vote handlers
   const handleRoleVote = (targetId, roleGuess) => {
     if (submitted) return;
     setVotes(prev => ({
@@ -91,45 +91,52 @@ export default function VotingPanel({ playerId }) {
     }));
   };
 
-  // ✅ 5. Manual submit
+  // ✅ Manual submit
   const handleSubmitVotes = async () => {
     if (submitted) return;
-    await updateDoc(doc(db, "players", playerId), {
-      votes,
-      hasVoted: true,
-    });
-    setSubmitted(true);
-    alert("✅ Your votes have been submitted!");
+    try {
+      await updateDoc(doc(db, "players", playerId), {
+        votes,
+        hasVoted: true,
+      });
+      setSubmitted(true);
+      alert("✅ Your votes have been submitted!");
+    } catch (error) {
+      console.error("Error submitting votes:", error);
+      alert("❌ Failed to submit votes.");
+    }
   };
 
-  // ✅ 6. Auto-submit on timer end AND switch phase
+  // ✅ Auto-submit on timer end
   const handleAutoSubmit = async () => {
     if (submitted) return;
-
-    await updateDoc(doc(db, "players", playerId), {
-      votes,
-      hasVoted: true,
-    });
-
-    // ✅ Also switch game phase to 'voting' in Firestore
     try {
-      await updateDoc(doc(db, "game", "settings"), {
-        phase: "score"
+      await updateDoc(doc(db, "players", playerId), {
+        votes,
+        hasVoted: true,
       });
-    } catch (error) {
-      console.error("Failed to switch phase automatically:", error);
-    }
+      setSubmitted(true);
+      alert("⏰ Time is up! Your votes were auto-submitted.");
 
-    setSubmitted(true);
-    alert("⏰ Time is up! Your votes were auto-submitted.");
+      // ✅ ONLY host triggers phase change
+      if (isHost) {
+        await updateDoc(doc(db, "game", "settings"), {
+          phase: "score"
+        });
+      }
+
+    } catch (error) {
+      console.error("Error during auto-submit:", error);
+      alert("❌ Failed to auto-submit votes. Please try manually.");
+    }
   };
 
-  // ✅ 7. Filter for search bar
+  // ✅ Filter players
   const filtered = players.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  // ✅ 8. Render
+  // ✅ Render
   return (
     <div style={{ marginTop: 30 }}>
       <h3>🗳️ Vote While You Chat</h3>

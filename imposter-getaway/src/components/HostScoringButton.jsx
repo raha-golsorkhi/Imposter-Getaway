@@ -1,14 +1,26 @@
 import { scorePlayers } from "../utils/scorePlayers";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../utils/firebaseConfig";
 
 export default function HostScoringButton() {
   const handleClick = async () => {
-    if (!window.confirm("Calculate scores and determine winners now?")) return;
+    const confirm = window.confirm("This will calculate scores and reveal results to all players. Continue?");
+    if (!confirm) return;
+
     try {
+      // 1️⃣ Run scoring
       await scorePlayers();
-      alert("✅ Scoring complete! Results saved.");
+
+      // 2️⃣ Set game phase to 'results' so everyone sees ResultsScreen
+      await updateDoc(doc(db, "game", "settings"), {
+        phase: "results"
+      });
+
+      alert("✅ Results calculated and revealed!");
+
     } catch (error) {
       console.error("Error during scoring:", error);
-      alert("❌ Scoring failed. Check console for details.");
+      alert("❌ Failed to calculate and show results. Check console.");
     }
   };
 
@@ -18,14 +30,14 @@ export default function HostScoringButton() {
       style={{
         marginTop: 20,
         padding: "10px 20px",
-        backgroundColor: "#9333ea",
+        backgroundColor: "#f59e0b",
         color: "white",
         border: "none",
         borderRadius: 5,
         fontSize: 16,
       }}
     >
-      🧮 Calculate Results
+      🧮 Calculate & Show Results
     </button>
   );
 }

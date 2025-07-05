@@ -43,20 +43,6 @@ export default function HostControls() {
       >
         🎯 Start Game & Assign Roles
       </button>
-
-      <button
-        onClick={handleCalculateAndShowResults}
-        style={{
-          padding: "10px 20px",
-          fontSize: 16,
-          backgroundColor: "#f59e0b",
-          color: "white",
-          border: "none",
-          borderRadius: 5,
-        }}
-      >
-        🏆 Calculate & Show Results
-      </button>
     </div>
   );
 }

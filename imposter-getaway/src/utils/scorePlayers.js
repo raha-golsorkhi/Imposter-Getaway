@@ -1,5 +1,7 @@
 import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
+import { setDoc } from "firebase/firestore";
+
 
 export async function scorePlayers() {
   // Fetch all players
@@ -83,10 +85,10 @@ export async function scorePlayers() {
     .slice(0, 4);
 
   // Optionally write to /game/results in Firestore
-  await updateDoc(doc(db, "game", "results"), {
+  await setDoc(doc(db, "game", "results"), {
     bestGuessers: bestGuessers.map(p => ({ id: p.id, name: p.name, score: p.score })),
     bestStorytellers: bestStorytellers.map(p => ({ id: p.id, name: p.name, averageRating: p.averageRating }))
-  });
+  }, { merge: true });
 
   alert("✅ Scoring complete! Check Firestore /game/results for top players.");
 }

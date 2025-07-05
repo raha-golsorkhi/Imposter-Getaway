@@ -66,12 +66,12 @@ function App() {
           />
 
           {/* ✅ Host Controls: Assign Roles */}
-          {isHost && (phase === "waiting" || phase === "chatting") && (
+          {isHost && (phase === "waiting" || rolesAssigned) && (
             <HostControls />
           )}
 
           {/* ✅ Host Start Chat button */}
-          {isHost && phase === "waiting" && rolesAssigned && (
+          {isHost && phase === "waiting" && (
             <>
               <div>Roles assigned. Please start the chat.</div>
               <StartChatButton />
@@ -79,7 +79,7 @@ function App() {
           )}
 
           {/* ✅ Host scoring button during voting phase */}
-          {isHost && phase === "voting" && (
+          {isHost && (phase === "score" || phase === "chatting") && (
             <HostScoringButton />
           )}
         </>
