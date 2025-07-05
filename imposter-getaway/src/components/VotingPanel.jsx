@@ -102,13 +102,24 @@ export default function VotingPanel({ playerId }) {
     alert("✅ Your votes have been submitted!");
   };
 
-  // ✅ 6. Auto-submit on timer end
+  // ✅ 6. Auto-submit on timer end AND switch phase
   const handleAutoSubmit = async () => {
     if (submitted) return;
+
     await updateDoc(doc(db, "players", playerId), {
       votes,
       hasVoted: true,
     });
+
+    // ✅ Also switch game phase to 'voting' in Firestore
+    try {
+      await updateDoc(doc(db, "game", "settings"), {
+        phase: "score"
+      });
+    } catch (error) {
+      console.error("Failed to switch phase automatically:", error);
+    }
+
     setSubmitted(true);
     alert("⏰ Time is up! Your votes were auto-submitted.");
   };
