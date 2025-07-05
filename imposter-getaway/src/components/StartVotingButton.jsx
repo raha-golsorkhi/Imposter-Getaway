@@ -1,31 +1,27 @@
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
-export default function StartChatButton() {
-  const handleStartChat = async () => {
+export default function StartVotingButton() {
+  const handleStartVoting = async () => {
     await updateDoc(doc(db, "game", "settings"), {
-      phase: "chatting",
-      chatStarted: true,
-      votingStartTime: serverTimestamp(),
-      votingDuration: 10
+      phase: "voting",
     });
-    alert("✅ Chatting phase started. Timer has begun for everyone!");
   };
 
   return (
     <button
-      onClick={handleStartChat}
+      onClick={handleStartVoting}
       style={{
         marginTop: 20,
         padding: "10px 20px",
-        backgroundColor: "#10b981",
+        backgroundColor: "#f59e0b",
         color: "white",
         border: "none",
         borderRadius: 5,
         fontSize: 16,
       }}
     >
-      🗣️ Start Chatting
+      🗳️ Start Voting
     </button>
   );
 }
