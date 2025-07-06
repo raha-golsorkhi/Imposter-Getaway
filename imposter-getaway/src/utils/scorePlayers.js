@@ -79,16 +79,17 @@ export async function scorePlayers() {
   const updatedSnapshot = await getDocs(collection(db, "players"));
   const updatedPlayers = updatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  // 8️⃣ Identify top guessers and storytellers
+  // ✅ Best 2 guessers with score > 0
   const bestGuessers = updatedPlayers
-    .filter(p => p.role !== "host")
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+  .filter(p => p.role !== "host" && p.score > 0)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 2);
 
+  // ✅ Best 2 storytellers with avg rating > 0
   const bestStorytellers = updatedPlayers
-    .filter(p => p.role !== "host" && p.averageRating >= 4.5)
-    .sort((a, b) => b.averageRating - a.averageRating)
-    .slice(0, 4);
+  .filter(p => p.role !== "host" && p.averageRating > 0)
+  .sort((a, b) => b.averageRating - a.averageRating)
+  .slice(0, 2);
 
   console.log("🏆 Best Guessers:", bestGuessers.map(p => p.name));
   console.log("🌟 Best Storytellers:", bestStorytellers.map(p => p.name));
