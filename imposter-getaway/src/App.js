@@ -5,7 +5,8 @@ import JoinForm from "./components/JoinForm";
 import WaitingRoom from "./components/WaitingRoom";
 import HostControls from "./components/HostControls";
 import StartChatButton from "./components/StartChatButton";
-import StartVotingButton from "./components/StartVotingButton";
+import HostScoringButton from "./components/HostScoringButton";
+import ResultsScreen from "./components/ResultsScreen";
 
 function App() {
   const USE_LOCAL_STORAGE = false;
@@ -26,7 +27,7 @@ function App() {
 
   const isHost = player?.name?.trim().toLowerCase() === "raha";
 
-  // ✅ Listen to game settings
+  // Listen to game settings in Firestore
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "game", "settings"), (docSnap) => {
       if (docSnap.exists()) {
@@ -51,7 +52,9 @@ function App() {
         padding: "20px",
       }}
     >
-      {!player ? (
+      {phase === "results" ? (
+        <ResultsScreen />
+      ) : !player ? (
         <JoinForm onJoin={setPlayer} />
       ) : (
         <>
@@ -63,21 +66,21 @@ function App() {
           />
 
           {/* ✅ Host Controls: Assign Roles */}
-          {isHost && (phase === "waiting" || phase === "chatting") && (
+          {isHost && (phase === "waiting" || rolesAssigned) && (
             <HostControls />
           )}
 
           {/* ✅ Host Start Chat button */}
-          {isHost && phase === "waiting" && rolesAssigned && (
+          {isHost && phase === "waiting" && (
             <>
               <div>Roles assigned. Please start the chat.</div>
               <StartChatButton />
             </>
           )}
 
-          {/* ✅ Host Start Voting button */}
-          {isHost && phase === "chatting" && chatStarted && (
-            <StartVotingButton />
+          {/* ✅ Host scoring button during voting phase */}
+          {isHost && (phase === "score" || phase === "chatting") && (
+            <HostScoringButton />
           )}
         </>
       )}
