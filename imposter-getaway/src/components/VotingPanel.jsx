@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, getDocs, updateDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
@@ -11,7 +11,14 @@ export default function VotingPanel({ playerId, isHost }) {
   const [votingStartTime, setVotingStartTime] = useState(null);
   const [votingDuration, setVotingDuration] = useState(60);
 
-  // ✅ Load players (exclude self)
+  const votesRef = useRef(votes);
+
+  // Keep votesRef in sync with votes state
+  useEffect(() => {
+    votesRef.current = votes;
+  }, [votes]);
+
+  // ✅ Load all players except self
   useEffect(() => {
     const fetchPlayers = async () => {
       const snapshot = await getDocs(collection(db, "players"));
@@ -24,12 +31,9 @@ export default function VotingPanel({ playerId, isHost }) {
     const checkIfSubmitted = async () => {
       const playerRef = doc(db, "players", playerId);
       const playerSnap = await getDoc(playerRef);
-      if (playerSnap.exists()) {
-        const data = playerSnap.data();
-        if (data.hasVoted) {
-          setSubmitted(true);
-          setVotes(data.votes || {});
-        }
+      if (playerSnap.exists() && playerSnap.data().hasVoted) {
+        setSubmitted(true);
+        setVotes(playerSnap.data().votes || {});
       }
     };
 
@@ -37,7 +41,7 @@ export default function VotingPanel({ playerId, isHost }) {
     checkIfSubmitted();
   }, [playerId]);
 
-  // ✅ Listen to voting settings
+  // ✅ Listen for voting start time and duration
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "game", "settings"), (docSnap) => {
       if (docSnap.exists()) {
@@ -49,7 +53,7 @@ export default function VotingPanel({ playerId, isHost }) {
     return unsub;
   }, []);
 
-  // ✅ Shared countdown timer
+  // ✅ Countdown timer
   useEffect(() => {
     if (!votingStartTime || submitted) return;
 
@@ -61,12 +65,45 @@ export default function VotingPanel({ playerId, isHost }) {
 
       if (diff <= 0) {
         clearInterval(interval);
-        handleAutoSubmit();
+        submitVotes(true);
       }
     }, 1000);
 
     return () => clearInterval(interval);
   }, [votingStartTime, votingDuration, submitted]);
+
+  // ✅ Unified submission (manual or auto)
+  const submitVotes = async (isAuto = false) => {
+    if (submitted) return;
+
+    try {
+      // Use *latest* votes from ref
+      const votesToSubmit = votesRef.current;
+
+      await updateDoc(doc(db, "players", playerId), {
+        votes: votesToSubmit,
+        hasVoted: true,
+      });
+      setSubmitted(true);
+
+      if (isAuto) {
+        alert("⏰ Time is up! Your votes were auto-submitted.");
+      } else {
+        alert("✅ Your votes have been submitted!");
+      }
+
+      // ✅ Only host moves phase forward on auto-submit
+      if (isAuto && isHost) {
+        await updateDoc(doc(db, "game", "settings"), {
+          phase: "score"
+        });
+      }
+
+    } catch (error) {
+      console.error("Error submitting votes:", error);
+      alert("❌ Failed to submit votes. Try again.");
+    }
+  };
 
   // ✅ Vote handlers
   const handleRoleVote = (targetId, roleGuess) => {
@@ -91,47 +128,7 @@ export default function VotingPanel({ playerId, isHost }) {
     }));
   };
 
-  // ✅ Manual submit
-  const handleSubmitVotes = async () => {
-    if (submitted) return;
-    try {
-      await updateDoc(doc(db, "players", playerId), {
-        votes,
-        hasVoted: true,
-      });
-      setSubmitted(true);
-      alert("✅ Your votes have been submitted!");
-    } catch (error) {
-      console.error("Error submitting votes:", error);
-      alert("❌ Failed to submit votes.");
-    }
-  };
-
-  // ✅ Auto-submit on timer end
-  const handleAutoSubmit = async () => {
-    if (submitted) return;
-    try {
-      await updateDoc(doc(db, "players", playerId), {
-        votes,
-        hasVoted: true,
-      });
-      setSubmitted(true);
-      alert("⏰ Time is up! Your votes were auto-submitted.");
-
-      // ✅ ONLY host triggers phase change
-      if (isHost) {
-        await updateDoc(doc(db, "game", "settings"), {
-          phase: "score"
-        });
-      }
-
-    } catch (error) {
-      console.error("Error during auto-submit:", error);
-      alert("❌ Failed to auto-submit votes. Please try manually.");
-    }
-  };
-
-  // ✅ Filter players
+  // ✅ Filtered search
   const filtered = players.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -196,7 +193,7 @@ export default function VotingPanel({ playerId, isHost }) {
           </ul>
 
           <button
-            onClick={handleSubmitVotes}
+            onClick={() => submitVotes(false)}
             style={{
               marginTop: 20,
               backgroundColor: "#4ade80",

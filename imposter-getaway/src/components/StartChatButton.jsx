@@ -7,7 +7,7 @@ export default function StartChatButton() {
       phase: "chatting",
       chatStarted: true,
       votingStartTime: serverTimestamp(),
-      votingDuration: 30
+      votingDuration: 60
     });
     alert("✅ Chatting phase started. Timer has begun for everyone!");
   };
