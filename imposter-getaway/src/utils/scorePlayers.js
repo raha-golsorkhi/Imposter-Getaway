@@ -1,94 +1,112 @@
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, setDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "./firebaseConfig";
-import { setDoc } from "firebase/firestore";
-
 
 export async function scorePlayers() {
-  // Fetch all players
+  console.log("⚡️ Scoring starting...");
+
+  // 1️⃣ Fetch all players
   const snapshot = await getDocs(collection(db, "players"));
   const players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  // Build a quick lookup of playerId => role
+  // 2️⃣ Build lookup of playerId => role
   const roleMap = {};
   players.forEach(p => {
     roleMap[p.id] = p.role;
   });
 
-  // For collecting ratings received per player
+  console.log("✅ Built role map:", roleMap);
+
+  // 3️⃣ Collect ratings *received* for each target
   const ratingsReceived = {};
   players.forEach(p => {
     ratingsReceived[p.id] = [];
   });
 
-  // Count correct guesses for each voter
+  // 4️⃣ Calculate correct guesses + collect ratings
   const scoreUpdates = [];
 
   players.forEach(voter => {
-    if (!voter.votes || voter.role === "host") {
+    if (voter.role === "host" || !voter.votes) {
+      console.log(`⏩ Skipping voter: ${voter.name}`);
       scoreUpdates.push(updateDoc(doc(db, "players", voter.id), {
         score: 0
       }));
       return;
     }
 
-    let correct = 0;
+    let correctGuesses = 0;
 
-    Object.entries(voter.votes).forEach(([targetId, vote]) => {
-      // Count role guess correctness
-      if (vote.roleGuess && roleMap[targetId] && vote.roleGuess === roleMap[targetId]) {
-        correct += 1;
+    for (const [targetId, vote] of Object.entries(voter.votes)) {
+      const actualRole = roleMap[targetId];
+
+      // Count correct role guesses
+      if (vote.roleGuess && actualRole && vote.roleGuess === actualRole) {
+        correctGuesses += 1;
       }
 
-      // Accumulate rating for the target
+      // Add rating if given
       if (vote.rating && ratingsReceived[targetId]) {
         ratingsReceived[targetId].push(vote.rating);
       }
-    });
+    }
 
-    // Store voter's score
+    console.log(`✅ ${voter.name}: ${correctGuesses} correct guesses`);
     scoreUpdates.push(updateDoc(doc(db, "players", voter.id), {
-      score: correct
+      score: correctGuesses
     }));
   });
 
-  // Store ratings received + average for each player
+  // 5️⃣ Compute and store average ratings for each player
   players.forEach(player => {
-    const received = ratingsReceived[player.id] || [];
-    const avg = received.length
-      ? parseFloat((received.reduce((a, b) => a + b, 0) / received.length).toFixed(2))
+    const ratings = ratingsReceived[player.id] || [];
+    const average = ratings.length
+      ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(2))
       : 0;
 
+    console.log(`⭐️ ${player.name}: average rating ${average}`);
+
     scoreUpdates.push(updateDoc(doc(db, "players", player.id), {
-      receivedRatings: received,
-      averageRating: avg
+      receivedRatings: ratings,
+      averageRating: average
     }));
   });
 
-  // Wait for all updates
+  // 6️⃣ Commit all updates
   await Promise.all(scoreUpdates);
+  console.log("✅ Player scores and ratings updated!");
 
-  // OPTIONAL: Find top 4 guessers and top 4 storytellers
-  const nonHosts = players.filter(p => p.role !== "host");
-
-  // Load latest scores
+  // 7️⃣ Reload latest player data
   const updatedSnapshot = await getDocs(collection(db, "players"));
   const updatedPlayers = updatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+  // ✅ Best 2 guessers with score > 0
   const bestGuessers = updatedPlayers
-    .filter(p => p.role !== "host")
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4);
+  .filter(p => p.role !== "host" && p.score > 0)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 2);
 
+  // ✅ Best 2 storytellers with avg rating > 0
   const bestStorytellers = updatedPlayers
-    .filter(p => p.role !== "host" && p.averageRating >= 5)
-    .sort((a, b) => b.averageRating - a.averageRating)
-    .slice(0, 4);
+  .filter(p => p.role !== "host" && p.averageRating > 0)
+  .sort((a, b) => b.averageRating - a.averageRating)
+  .slice(0, 2);
 
-  // Optionally write to /game/results in Firestore
+  console.log("🏆 Best Guessers:", bestGuessers.map(p => p.name));
+  console.log("🌟 Best Storytellers:", bestStorytellers.map(p => p.name));
+
+  // 9️⃣ Save results to Firestore
   await setDoc(doc(db, "game", "results"), {
-    bestGuessers: bestGuessers.map(p => ({ id: p.id, name: p.name, score: p.score })),
-    bestStorytellers: bestStorytellers.map(p => ({ id: p.id, name: p.name, averageRating: p.averageRating }))
+    bestGuessers: bestGuessers.map(p => ({
+      id: p.id,
+      name: p.name,
+      score: p.score
+    })),
+    bestStorytellers: bestStorytellers.map(p => ({
+      id: p.id,
+      name: p.name,
+      averageRating: p.averageRating
+    }))
   }, { merge: true });
 
-  alert("✅ Scoring complete! Check Firestore /game/results for top players.");
+  alert("✅ Scoring complete! Results saved to /game/results");
 }

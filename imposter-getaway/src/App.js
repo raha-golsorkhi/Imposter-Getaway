@@ -66,7 +66,7 @@ function App() {
           />
 
           {/* ✅ Host Controls: Assign Roles */}
-          {isHost && (phase === "waiting" || rolesAssigned) && (
+          {isHost && (phase === "waiting" ) && (
             <HostControls />
           )}
 
