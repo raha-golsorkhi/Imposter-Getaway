@@ -111,6 +111,35 @@ export default function WaitingRoom({ player, role, setRole, isHost }) {
     return () => clearInterval(interval);
   }, [isHost, phase, chatStarted]);
 
+  // ✅ 5️⃣ Host: During voting, sync all players to voting phase
+useEffect(() => {
+  if (!isHost) return;
+  if (phase !== "voting") return;
+
+  console.log("[Host] Enforcing voting phase for late joiners");
+
+  const unsubscribe = onSnapshot(collection(db, "players"), async (snapshot) => {
+    const players = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    const needsUpdate = players.filter(p =>
+      p.phase !== "voting" &&
+      p.name.trim().toLowerCase() !== "raha"
+    );
+
+    if (needsUpdate.length === 0) return;
+
+    console.log("[Host] Found late joiners needing phase update:", needsUpdate.map(p => p.name));
+
+    const updates = needsUpdate.map(player =>
+      updateDoc(doc(db, "players", player.id), { phase: "voting" })
+    );
+
+    await Promise.all(updates);
+  });
+
+  return unsubscribe;
+}, [isHost, phase]);
+
   return (
     <div>
       <h2>Welcome, {player.name}</h2>
@@ -129,10 +158,13 @@ export default function WaitingRoom({ player, role, setRole, isHost }) {
       ) : (
         <p>Waiting for game to start...</p>
       )}
+      
 
       {phase === "chatting" && chatStarted && (
         <ChatUI playerId={player.id} isHost={isHost} />
       )}
     </div>
   );
+  
+  
 }

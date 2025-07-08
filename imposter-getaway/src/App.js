@@ -7,10 +7,13 @@ import HostControls from "./components/HostControls";
 import StartChatButton from "./components/StartChatButton";
 import HostScoringButton from "./components/HostScoringButton";
 import ResultsScreen from "./components/ResultsScreen";
+import VotingPanel from "./components/VotingPanel";
 
 function App() {
-  const USE_LOCAL_STORAGE = false;
+  // ✅ Toggle this ON to use localStorage for returning players
+  const USE_LOCAL_STORAGE = true;
 
+  // ✅ Remember logged-in player from localStorage if present
   const [player, setPlayer] = useState(() => {
     if (USE_LOCAL_STORAGE) {
       const id = localStorage.getItem("playerId");
@@ -27,7 +30,7 @@ function App() {
 
   const isHost = player?.name?.trim().toLowerCase() === "raha";
 
-  // Listen to game settings in Firestore
+  // ✅ Listen in real time to global game settings
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "game", "settings"), (docSnap) => {
       if (docSnap.exists()) {
@@ -40,6 +43,7 @@ function App() {
     return unsub;
   }, []);
 
+  // ✅ Main render with phase-based routing
   return (
     <div
       style={{
@@ -52,10 +56,12 @@ function App() {
         padding: "20px",
       }}
     >
-      {phase === "results" ? (
-        <ResultsScreen />
-      ) : !player ? (
+      {!player ? (
         <JoinForm onJoin={setPlayer} />
+      ) : phase === "results" ? (
+        <ResultsScreen />
+      ) : phase === "voting" ? (
+        <VotingPanel playerId={player.id} isHost={isHost} />
       ) : (
         <>
           <WaitingRoom
@@ -65,12 +71,8 @@ function App() {
             isHost={isHost}
           />
 
-          {/* ✅ Host Controls: Assign Roles */}
-          {isHost && (phase === "waiting" ) && (
-            <HostControls />
-          )}
+          {isHost && phase === "waiting" && <HostControls />}
 
-          {/* ✅ Host Start Chat button */}
           {isHost && phase === "waiting" && (
             <>
               <div>Roles assigned. Please start the chat.</div>
@@ -78,7 +80,6 @@ function App() {
             </>
           )}
 
-          {/* ✅ Host scoring button during voting phase */}
           {isHost && (phase === "score" || phase === "chatting") && (
             <HostScoringButton />
           )}

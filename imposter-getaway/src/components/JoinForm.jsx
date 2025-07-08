@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
 // ✅ Toggle this ON/OFF to control localStorage behavior
-const USE_LOCAL_STORAGE = false;   // <-- set to true for production
+const USE_LOCAL_STORAGE = true;   // <-- set to true for production
 
 export default function JoinForm({ onJoin }) {
   const [name, setName] = useState("");
@@ -14,12 +14,26 @@ export default function JoinForm({ onJoin }) {
     const trimmedName = name.trim();
     if (!trimmedName) return;
 
-    // Add new player to Firestore
+    // ✅ Fetch current game phase from /game/settings
+    let gamePhase = "waiting";
+    try {
+      const settingsRef = doc(db, "game", "settings");
+      const settingsSnap = await getDoc(settingsRef);
+      if (settingsSnap.exists()) {
+        const data = settingsSnap.data();
+        gamePhase = data.phase || "waiting";
+      }
+    } catch (error) {
+      console.error("Error getting game settings:", error);
+    }
+
+    // ✅ Add new player to Firestore with phase
     const docRef = await addDoc(collection(db, "players"), {
       name: trimmedName,
       role: null,
       hasVoted: false,
       score: 0,
+      phase: gamePhase,
     });
 
     // ✅ Save to localStorage *only if enabled*
@@ -28,10 +42,10 @@ export default function JoinForm({ onJoin }) {
       localStorage.setItem("playerName", trimmedName);
     }
 
-    // Notify parent component
+    // ✅ Notify parent component
     onJoin({ id: docRef.id, name: trimmedName });
 
-    // Clear input field for next player on same device
+    // ✅ Clear input field
     setName("");
   };
 

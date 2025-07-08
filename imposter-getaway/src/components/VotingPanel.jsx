@@ -18,16 +18,16 @@ export default function VotingPanel({ playerId, isHost }) {
     votesRef.current = votes;
   }, [votes]);
 
-  // ✅ Load all players except self
   useEffect(() => {
-    const fetchPlayers = async () => {
-      const snapshot = await getDocs(collection(db, "players"));
+    // Real-time listener for players
+    const unsub = onSnapshot(collection(db, "players"), (snapshot) => {
       const others = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(p => p.id !== playerId);
       setPlayers(others);
-    };
-
+    });
+  
+    // Check if this player already submitted votes
     const checkIfSubmitted = async () => {
       const playerRef = doc(db, "players", playerId);
       const playerSnap = await getDoc(playerRef);
@@ -36,10 +36,12 @@ export default function VotingPanel({ playerId, isHost }) {
         setVotes(playerSnap.data().votes || {});
       }
     };
-
-    fetchPlayers();
+  
     checkIfSubmitted();
+  
+    return unsub;
   }, [playerId]);
+  
 
   // ✅ Listen for voting start time and duration
   useEffect(() => {
@@ -154,25 +156,38 @@ export default function VotingPanel({ playerId, isHost }) {
               <li key={p.id} style={{ marginBottom: 20, borderBottom: "1px solid #ddd", paddingBottom: 10 }}>
                 <strong>{p.name}</strong>
                 <div style={{ marginTop: 5 }}>
-                  <button
-                    onClick={() => handleRoleVote(p.id, "imposter")}
-                    disabled={votes[p.id]?.roleGuess === "imposter"}
-                    style={{
-                      marginRight: 5,
-                      backgroundColor: votes[p.id]?.roleGuess === "imposter" ? "#f87171" : "#eee",
-                    }}
-                  >
-                    Imposter
-                  </button>
-                  <button
-                    onClick={() => handleRoleVote(p.id, "civilian")}
-                    disabled={votes[p.id]?.roleGuess === "civilian"}
-                    style={{
-                      backgroundColor: votes[p.id]?.roleGuess === "civilian" ? "#60a5fa" : "#eee",
-                    }}
-                  >
-                    Civilian
-                  </button>
+                <button
+                  onClick={() => handleRoleVote(p.id, "imposter")}
+                  disabled={votes[p.id]?.roleGuess === "imposter"}
+                  style={{
+                    marginRight: 5,
+                    backgroundColor: votes[p.id]?.roleGuess === "imposter" ? "#dc2626" : "#9ca3af", // Dark red if selected, dark grey default
+                    color: "white",
+                    padding: "8px 12px",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: votes[p.id]?.roleGuess === "imposter" ? "default" : "pointer",
+                    fontWeight: "bold",
+                     }}
+                    >
+                  Imposter
+                </button>
+<button
+  onClick={() => handleRoleVote(p.id, "civilian")}
+  disabled={votes[p.id]?.roleGuess === "civilian"}
+  style={{
+    backgroundColor: votes[p.id]?.roleGuess === "civilian" ? "#2563eb" : "#9ca3af", // Blue if selected, dark grey default
+    color: "white",
+    padding: "8px 12px",
+    border: "none",
+    borderRadius: 4,
+    cursor: votes[p.id]?.roleGuess === "civilian" ? "default" : "pointer",
+    fontWeight: "bold",
+  }}
+>
+  Civilian
+</button>
+
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <label>⭐ Rate Story Quality:</label>
