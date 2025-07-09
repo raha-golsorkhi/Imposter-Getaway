@@ -99,7 +99,7 @@ export default function WaitingRoom({ player, role, setRole, isHost }) {
           await updateDoc(doc(db, "game", "settings"), {
             phase: "voting",
             votingStartTime: new Date(),
-            votingDuration: 60
+            votingDuration: 480
           });
           alert("✅ Chat time is over! Game moved to Voting phase.");
         } catch (error) {
@@ -140,25 +140,42 @@ useEffect(() => {
   return unsubscribe;
 }, [isHost, phase]);
 
-  return (
-    <div>
-      <h2>Welcome, {player.name}</h2>
+return (
+  <div style={{
+    maxWidth: 600,
+    margin: '0 auto',
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    textAlign: 'center'
+  }}>
+    <h2 style={{ fontSize: '1.8rem', marginBottom: 10 }}>👋 Welcome, {player.name}!</h2>
 
-      {role ? (
-        <p>
+    <p style={{ fontSize: '1rem', color: '#555', marginBottom: 20 }}>
+      Get ready for The Imposter Getaway! 
+      You'll have <strong>8 minutes</strong> to chat in-person. 
+      Share a <strong>short vacation story</strong> that fits your role. Civilians must tell the truth. Imposters must lie convincingly! 
+      Listen carefully to others, because after the round you'll vote here on who you think is an Imposter or a Civilian. 
+      When you're ready, make sure to complete all your votes before hitting <strong>Submit</strong>.
+    </p>
+
+    {role ? (
+      <>
+        <p style={{ fontSize: '1.2rem', marginBottom: 10 }}>
           <strong>Your Role:</strong>{" "}
           {role === "imposter"
-            ? "🕵️ Imposter (Lie!)"
+            ? <span style={{ color: '#dc2626' }}>🕵️ Imposter (Lie! Convince them you're telling the truth!)</span>
             : role === "civilian"
-            ? "🧳 Civilian (Tell the Truth)"
+            ? <span style={{ color: '#2563eb' }}>🧳 Civilian (Tell your true vacation story!)</span>
             : role === "host"
-            ? "⭐ Host"
+            ? <span style={{ color: '#f59e0b' }}>⭐ Host (Guide the game and assign roles!)</span>
             : role}
         </p>
-      ) : (
-        <p>Waiting for game to start...</p>
-      )}
-      
+      </>
+    ) : (
+      <p style={{ fontSize: '1.1rem', color: '#777' }}>⏳ Waiting for the host to assign roles and start the game...</p>
+    )}
 
       {phase === "chatting" && chatStarted && (
         <ChatUI playerId={player.id} isHost={isHost} />

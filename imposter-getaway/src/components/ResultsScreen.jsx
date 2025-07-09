@@ -40,7 +40,7 @@ export default function ResultsScreen() {
       <h2>🏆 Game Results</h2>
 
       <section style={{ marginTop: 20 }}>
-        <h3>🎯 Top 2 Best Guessers</h3>
+        <h3>🎯 Top 4 Best Guessers</h3>
         <ul style={{ padding: 0, listStyle: "none" }}>
           {results.bestGuessers?.length > 0 ? (
             results.bestGuessers.map((player, idx) => (
@@ -63,7 +63,7 @@ export default function ResultsScreen() {
       </section>
 
       <section style={{ marginTop: 30 }}>
-        <h3>🌟 Top 2 Best Storytellers</h3>
+        <h3>🌟 Top 4 Best Storytellers</h3>
         <ul style={{ padding: 0, listStyle: "none" }}>
           {results.bestStorytellers?.length > 0 ? (
             results.bestStorytellers.map((player, idx) => (

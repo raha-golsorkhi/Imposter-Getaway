@@ -10,8 +10,8 @@ import ResultsScreen from "./components/ResultsScreen";
 import VotingPanel from "./components/VotingPanel";
 
 function App() {
-  // ✅ Toggle this ON to use localStorage for returning players
-  const USE_LOCAL_STORAGE = true;
+  // ✅ Toggle this ON to use localStorage for returning players <<<<<<<-------
+  const USE_LOCAL_STORAGE = true; 
 
   // ✅ Remember logged-in player from localStorage if present
   const [player, setPlayer] = useState(() => {

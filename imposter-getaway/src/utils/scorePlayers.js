@@ -83,13 +83,13 @@ export async function scorePlayers() {
   const bestGuessers = updatedPlayers
   .filter(p => p.role !== "host" && p.score > 0)
   .sort((a, b) => b.score - a.score)
-  .slice(0, 2);
+  .slice(0, 4);
 
   // ✅ Best 2 storytellers with avg rating > 0
   const bestStorytellers = updatedPlayers
   .filter(p => p.role !== "host" && p.averageRating > 0)
   .sort((a, b) => b.averageRating - a.averageRating)
-  .slice(0, 2);
+  .slice(0, 4);
 
   console.log("🏆 Best Guessers:", bestGuessers.map(p => p.name));
   console.log("🌟 Best Storytellers:", bestStorytellers.map(p => p.name));

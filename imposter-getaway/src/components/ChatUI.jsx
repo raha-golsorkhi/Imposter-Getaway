@@ -11,7 +11,7 @@ export default function ChatUI({ playerId, isHost }) {
 
       {isHost && (
         <div style={{ marginTop: 20, color: "#f59e0b" }}>
-          <strong>⭐ You're the Host:</strong> Play along — you might be a civilian or imposter too!
+          <strong>⭐ You're the Host</strong>
         </div>
       )}
 

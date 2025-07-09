@@ -2,16 +2,25 @@ import { useState, useEffect, useRef } from "react";
 import { collection, getDocs, updateDoc, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../utils/firebaseConfig";
 
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+
 export default function VotingPanel({ playerId, isHost }) {
   const [players, setPlayers] = useState([]);
   const [search, setSearch] = useState("");
   const [votes, setVotes] = useState({});
   const [submitted, setSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(60);
+  const [timeLeft, setTimeLeft] = useState(480);
   const [votingStartTime, setVotingStartTime] = useState(null);
-  const [votingDuration, setVotingDuration] = useState(60);
+  const [votingDuration, setVotingDuration] = useState(480);
 
   const votesRef = useRef(votes);
+
+  
 
   // Keep votesRef in sync with votes state
   useEffect(() => {
@@ -139,7 +148,8 @@ export default function VotingPanel({ playerId, isHost }) {
   return (
     <div style={{ marginTop: 30 }}>
       <h3>🗳️ Vote While You Chat</h3>
-      <p>⏰ Time Left: {timeLeft}s</p>
+      <p>⏰ Time Left: {formatTime(timeLeft)}</p>
+
 
       {!submitted && (
         <>
